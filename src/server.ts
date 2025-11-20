@@ -16,6 +16,14 @@ export class Server {
   constructor(port: number) {
     this.port = port;
     this.app = express();
+
+    this.configureMiddlewares();
+    this.registerRoutes();
+    this.registerNotFoundHandler();
+    this.registerErrorHandler();
+  }
+
+  private configureMiddlewares(): void {
     this.app.use(cors());
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
@@ -24,7 +32,23 @@ export class Server {
         stream: { write: message => logger.http(message.trim()) }
       })
     );
+  }
+
+  private registerRoutes(): void {
     this.app.use('/health', healthRouter);
+    
+  }
+
+  private registerNotFoundHandler(): void {
+    this.app.use((req: Request, res: Response) => {
+      res.status(HttpStatusCodes.NOT_FOUND).json({
+        message: HttpMessages.NOT_FOUND,
+        path: req.originalUrl
+      });
+    });
+  }
+
+  private registerErrorHandler(): void {
     this.app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
       logger.error(err.stack ?? err.message);
       res.status(HttpStatusCodes.INTERNAL_SERVER_ERROR).json({
